@@ -1,0 +1,17 @@
+# Exclude native build directories inside MyFirstApp
+react native/MyFirstApp/android
+react native/MyFirstApp/ios
+
+# Exclude local dependency and cache folders
+react native/MyFirstApp/node_modules
+react native/MyFirstApp/.expo
+react native/MyFirstApp/.metro
+node_modules/
+.expo/
+.metro/
+
+# Exclude environment secrets
+.env
+.env.*
+**/ .env
+**/ .env.*

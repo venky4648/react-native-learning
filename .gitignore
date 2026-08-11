@@ -14,19 +14,15 @@ web-build/
 dist/
 
 # Android
-android/app/build/
-android/.gradle/
-.gradle/
-**/.gradle/
-android/local.properties
+android/
+**/android/
 *.apk
 *.aar
 *.keystore
 
 # iOS
-ios/build/
-ios/Pods/
-ios/.xcode.env.local
+ios/
+**/ios/
 *.xcworkspace
 *.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/
