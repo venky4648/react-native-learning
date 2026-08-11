@@ -1,55 +1,62 @@
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 import { makeRedirectUri } from 'expo-auth-session';
-import { MSAL_CONFIG } from '@/constants/msal-config';
+import { API_URL } from '@/constants/api';
+import * as Linking from 'expo-linking';
 
 // Complete the auth session in the web browser (necessary for mobile redirection)
 WebBrowser.maybeCompleteAuthSession();
 
-export type MicrosoftUserProfile = {
-  email: string;
+export type BackendUserProfile = {
+  token: string;
+  _id: string;
   name: string;
-  microsoftId: string;
+  email: string;
 };
 
 /**
  * Executes Microsoft Sign-In OAuth flow and returns the Microsoft User Profile.
  */
-export async function signInWithMicrosoft(): Promise<MicrosoftUserProfile> {
-  if (!MSAL_CONFIG.clientId) {
-    throw new Error(
-      'Microsoft Client ID is missing. Please set EXPO_PUBLIC_MICROSOFT_CLIENT_ID in your .env file.'
-    );
-  }
-
+export async function signInWithMicrosoft(): Promise<BackendUserProfile> {
+  const authUrl = `${API_URL}/auth/microsoft/login`;
+  
   const redirectUri = makeRedirectUri({
-    scheme: MSAL_CONFIG.scheme,
+    scheme: 'myfirstapp',
     path: 'redirect',
   });
 
-  const authUrl = `${MSAL_CONFIG.discovery.authorizationEndpoint}?client_id=${
-    MSAL_CONFIG.clientId
-  }&response_type=token&redirect_uri=${encodeURIComponent(
-    redirectUri
-  )}&scope=${encodeURIComponent(MSAL_CONFIG.scopes.join(' '))}`;
+  let redirectedUrl: string | null = null;
+
+  // Add listener for incoming deep links
+  const subscription = Linking.addEventListener('url', (event) => {
+    console.log('[Microsoft Auth] Deep link listener received URL:', event.url);
+    if (event.url.includes('token=')) {
+      redirectedUrl = event.url;
+    }
+  });
 
   try {
-    console.log('[Microsoft Auth] Generated Redirect URI:', redirectUri);
+    console.log('[Microsoft Auth] Opening backend oauth page:', authUrl);
     const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
     console.log('[Microsoft Auth] WebBrowser result:', JSON.stringify(result, null, 2));
 
-    if (result.type !== 'success') {
+    // Remove listener
+    subscription.remove();
+
+    // Determine the URL to use (either from result or deep link listener)
+    const finalUrl = (result.type === 'success' ? result.url : null) || redirectedUrl;
+
+    if (!finalUrl || !finalUrl.includes('token=')) {
       throw new Error(`Sign-In failed: session was ${result.type}`);
     }
 
-    // Parse the redirect URL containing the hash fragment with the token
-    const url = result.url;
-    const hash = url.split('#')[1];
+    // Parse the redirect URL containing the query parameter with the token
+    const hash = finalUrl.split('?')[1] || finalUrl.split('#')[1];
     if (!hash) {
       throw new Error('No authentication details returned from Microsoft.');
     }
 
-    // Safely parse key-value pairs from the hash fragment
+    // Safely parse key-value pairs from the query fragment
     const params: { [key: string]: string } = {};
     hash.split('&').forEach((part) => {
       const [key, value] = part.split('=');
@@ -58,38 +65,23 @@ export async function signInWithMicrosoft(): Promise<MicrosoftUserProfile> {
       }
     });
 
-    const accessToken = params['access_token'];
-    if (!accessToken) {
-      throw new Error('Access token not found in Microsoft response.');
+    const token = params['token'];
+    const _id = params['_id'];
+    const name = params['name'];
+    const email = params['email'];
+
+    if (!token || !_id || !email) {
+      throw new Error('Authentication parameters are missing in response.');
     }
 
-    // Fetch user details from Microsoft Graph API
-    const response = await fetch('https://graph.microsoft.com/v1.0/me', {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to retrieve user profile from Microsoft Graph');
-    }
-
-    const data = await response.json();
-    
-    if (!data.mail && !data.userPrincipalName) {
-      throw new Error('No email address associated with this Microsoft account.');
-    }
-
-    const profile = {
-      email: data.mail || data.userPrincipalName,
-      name: data.displayName || 'Microsoft User',
-      microsoftId: data.id,
+    return {
+      token,
+      _id,
+      name: name || 'Microsoft User',
+      email,
     };
-
-    console.log('[Microsoft Auth] Fetched Profile from Graph API:', JSON.stringify(profile, null, 2));
-
-    return profile;
   } catch (error: any) {
+    subscription.remove();
     throw new Error(error.message || 'Failed to authenticate with Microsoft.');
   }
 }

@@ -135,9 +135,136 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+// @desc    Redirect to Microsoft Auth Endpoint
+// @route   GET /api/auth/microsoft/login
+// @access  Public
+const microsoftLoginRedirect = (req, res) => {
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  const tenantId = process.env.MICROSOFT_TENANT_ID || 'common';
+  const redirectUri = process.env.MICROSOFT_REDIRECT_URI || 'https://myfirstapp-backend-kfl7.onrender.com/api/auth/microsoft/callback';
+
+  if (!clientId) {
+    return res.status(500).json({ message: 'Server Configuration Error: MICROSOFT_CLIENT_ID is missing.' });
+  }
+
+  const authUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&response_mode=query&scope=${encodeURIComponent('openid profile email User.Read')}`;
+
+  res.redirect(authUrl);
+};
+
+// @desc    Handle Microsoft OAuth redirect callback
+// @route   GET /api/auth/microsoft/callback
+// @access  Public
+const microsoftCallback = async (req, res) => {
+  try {
+    const { code, error, error_description } = req.query;
+
+    if (error) {
+      return res.status(400).json({ error, description: error_description });
+    }
+
+    if (!code) {
+      return res.status(400).json({ message: 'Authorization code is missing' });
+    }
+
+    const clientId = process.env.MICROSOFT_CLIENT_ID;
+    const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+    const tenantId = process.env.MICROSOFT_TENANT_ID || 'common';
+    const redirectUri = process.env.MICROSOFT_REDIRECT_URI || 'https://myfirstapp-backend-kfl7.onrender.com/api/auth/microsoft/callback';
+
+    if (!clientId) {
+      return res.status(500).json({ message: 'Server Configuration Error: MICROSOFT_CLIENT_ID is missing.' });
+    }
+
+    const params = new URLSearchParams();
+    params.append('client_id', clientId);
+    if (clientSecret) params.append('client_secret', clientSecret);
+    params.append('code', code);
+    params.append('redirect_uri', redirectUri);
+    params.append('grant_type', 'authorization_code');
+    params.append('scope', 'openid profile email User.Read');
+
+    const tokenResponse = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    });
+
+    const tokenData = await tokenResponse.json();
+    if (!tokenResponse.ok) {
+      throw new Error(tokenData.error_description || 'Failed to exchange token');
+    }
+
+    const accessToken = tokenData.access_token;
+
+    const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    const graphData = await graphResponse.json();
+    if (!graphResponse.ok) {
+      throw new Error('Failed to retrieve user profile from Graph API');
+    }
+
+    const email = graphData.mail || graphData.userPrincipalName;
+    const name = graphData.displayName || 'Microsoft User';
+    const microsoftId = graphData.id;
+
+    if (!email) {
+      throw new Error('Microsoft email is required');
+    }
+
+    let user = await User.findOne({
+      $or: [{ microsoftId }, { email: email.toLowerCase() }],
+    });
+
+    if (user) {
+      if (!user.microsoftId && microsoftId) {
+        user.microsoftId = microsoftId;
+        await user.save();
+      }
+    } else {
+      user = await User.create({
+        name,
+        email: email.toLowerCase(),
+        microsoftId,
+      });
+    }
+
+    const token = generateToken(user._id);
+
+    const appRedirectUrl = `myfirstapp://redirect?token=${token}&_id=${user._id}&name=${encodeURIComponent(user.name)}&email=${encodeURIComponent(user.email)}`;
+
+    res.send(`
+      <html>
+        <head>
+          <title>Redirecting...</title>
+          <script>
+            window.location.href = "${appRedirectUrl}";
+          </script>
+        </head>
+        <body style="font-family: sans-serif; text-align: center; padding-top: 50px;">
+          <h3>Login Successful!</h3>
+          <p>Redirecting you back to the app...</p>
+          <a href="${appRedirectUrl}" style="color: #007AFF; text-decoration: none; font-weight: bold;">Click here if you are not redirected automatically</a>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Microsoft Callback Error:', error.message);
+    res.status(500).send(`Authentication error: ${error.message}`);
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   microsoftAuth,
   getUserProfile,
+  microsoftLoginRedirect,
+  microsoftCallback,
 };
