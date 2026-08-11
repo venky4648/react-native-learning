@@ -19,7 +19,7 @@ type AuthContextType = {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
-  loginWithMicrosoft: (user: User) => Promise<void>;
+  loginWithMicrosoft: (data: MicrosoftAuthData) => Promise<void>;
   fetchUserProfile: () => Promise<any>;
   logout: () => Promise<void>;
 };
@@ -132,15 +132,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const loginWithMicrosoft = async (userObj: User) => {
+  const loginWithMicrosoft = async (microsoftData: MicrosoftAuthData) => {
     try {
-      console.log('[Backend Auth] Logging in via Federated Auth:', JSON.stringify(userObj));
+      console.log('[Backend Auth] Sending Microsoft profile to backend:', JSON.stringify(microsoftData));
+      const response = await fetchWithTimeout(`${API_URL}/auth/microsoft`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(microsoftData),
+      });
+
+      const data = await response.json();
+      console.log('[Backend Auth] Backend response code:', response.status, 'body:', JSON.stringify(data));
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Microsoft Sign-In failed. Please try again.');
+      }
+
+      const userObj = {
+        _id: data._id,
+        name: data.name,
+        email: data.email,
+        token: data.token,
+      };
+
       setUser(userObj);
       await AsyncStorage.setItem('@user_session', JSON.stringify(userObj));
       console.log('[Backend Auth] Logged in successfully! Saved user to AsyncStorage.');
     } catch (error: any) {
-      console.error('[Backend Auth] Microsoft session save failed:', error.message);
-      throw new Error(error.message || 'Failed to save session.');
+      console.error('[Backend Auth] Microsoft login failed:', error.message);
+      throw new Error(error.message || 'Network error. Make sure your backend server is running.');
     }
   };
 
