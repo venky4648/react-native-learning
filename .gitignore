@@ -16,6 +16,8 @@ dist/
 # Android
 android/app/build/
 android/.gradle/
+.gradle/
+**/.gradle/
 android/local.properties
 *.apk
 *.aar
