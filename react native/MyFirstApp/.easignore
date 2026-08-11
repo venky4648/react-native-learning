@@ -1,0 +1,12 @@
+# Exclude native build directories (EAS will generate these from scratch in the cloud)
+/android
+/ios
+
+# Exclude local dependency and cache folders
+/node_modules
+/.expo
+/.metro
+
+# Exclude environment secrets
+.env
+.env.*
