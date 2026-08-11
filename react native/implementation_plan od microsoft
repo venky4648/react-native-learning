@@ -1,0 +1,98 @@
+# Implementation Plan: Sign In with Microsoft (MSAL)
+
+We will integrate native **Microsoft Sign-In** into your Expo React Native app using `react-native-msal` and connect it to your Express/MongoDB backend.
+
+---
+
+## 🔄 Authentication Sequence & Workflow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant App as React Native App (MSAL)
+    participant Azure as Microsoft Azure AD
+    participant API as Express Backend
+    participant DB as MongoDB
+
+    User->>App: Taps "Sign in with Microsoft"
+    App->>Azure: Launches MSAL Native Browser / Authenticator Prompt
+    User->>Azure: Enters Microsoft Credentials
+    Azure-->>App: Redirects to msauth://com.kotav.myfirstapp with Access Token
+    App->>App: Fetches Profile (Name, Email, Microsoft ID)
+    App->>API: Sends POST /api/auth/microsoft (Name, Email, Microsoft ID)
+    API->>DB: Finds or Creates User in MongoDB
+    DB-->>API: User Record Returned
+    API-->>App: Returns App JWT Session Token
+    App->>User: Navigates to Home Dashboard (Displays Name & Email)
+```
+
+---
+
+## 📋 Requirements Checklist
+
+### 1. Azure Portal Configuration (User Action)
+- Log in to [portal.azure.com](https://portal.azure.com).
+- Create an **App Registration**.
+- Copy **Application (Client) ID** and **Directory (Tenant) ID**.
+- Add **Android Platform** in Azure Portal:
+  - **Package Name:** `com.kotav.myfirstapp`
+  - **Redirect URI:** `msauth://com.kotav.myfirstapp/<BASE64_SHA1_HASH>`
+
+---
+
+## 🛠️ Proposed File Changes
+
+### Frontend (`MyFirstApp`)
+
+#### [MODIFY] [package.json](file:///c:/Users/kotav/Desktop/react%20native/MyFirstApp/package.json)
+- Add dependency: `react-native-msal`.
+
+#### [MODIFY] [app.json](file:///c:/Users/kotav/Desktop/react%20native/MyFirstApp/app.json)
+- Set package identifier: `"package": "com.kotav.myfirstapp"`.
+- Set custom redirect scheme: `"scheme": "myfirstapp"`.
+
+#### [NEW] [msal-config.ts](file:///c:/Users/kotav/Desktop/react%20native/MyFirstApp/src/constants/msal-config.ts)
+- Configures Client ID, Tenant ID, Redirect URI, and Scopes (`openid`, `profile`, `email`, `User.Read`).
+
+#### [NEW] [msal-service.ts](file:///c:/Users/kotav/Desktop/react%20native/MyFirstApp/src/services/msal-service.ts)
+- Initializes `PublicClientApplication` with MSAL native SDK.
+- Implements `acquireToken()` and fetches user info from Microsoft Graph API (`https://graph.microsoft.com/v1.0/me`).
+
+#### [NEW] [microsoft-button.tsx](file:///c:/Users/kotav/Desktop/react%20native/MyFirstApp/src/components/microsoft-button.tsx)
+- Custom branded Microsoft Sign-In button component with logo and loading states.
+
+#### [MODIFY] [auth-context.tsx](file:///c:/Users/kotav/Desktop/react%20native/MyFirstApp/src/context/auth-context.tsx)
+- Add `loginWithMicrosoft(profileData)` method to save Microsoft session and state.
+
+#### [MODIFY] [login.tsx](file:///c:/Users/kotav/Desktop/react%20native/MyFirstApp/src/app/login.tsx) & [signup.tsx](file:///c:/Users/kotav/Desktop/react%20native/MyFirstApp/src/app/signup.tsx)
+- Add "Sign in with Microsoft" button to the UI.
+
+---
+
+### Backend (`Backend`)
+
+#### [MODIFY] [User.js](file:///c:/Users/kotav/Desktop/react%20native/Backend/src/models/User.js)
+- Add `microsoftId` string field.
+- Make `password` optional for social login accounts.
+
+#### [MODIFY] [authController.js](file:///c:/Users/kotav/Desktop/react%20native/Backend/src/controllers/authController.js)
+- Add `microsoftLogin` handler to find/create users by `microsoftId` or `email` and generate JWT.
+
+#### [MODIFY] [authRoutes.js](file:///c:/Users/kotav/Desktop/react%20native/Backend/src/routes/authRoutes.js)
+- Register route `POST /api/auth/microsoft`.
+
+---
+
+## 🧪 Verification Plan
+
+### Automated / Prebuild Check
+- Run `npx expo prebuild` to ensure native Android project files generate without errors.
+- Run TypeScript compile check (`npx tsc --noEmit --skipLibCheck`).
+
+### Manual Verification
+1. Run `npx expo run:android` to build and launch on Android Studio Emulator.
+2. Tap "Sign in with Microsoft" on Login / Signup screen.
+3. Complete sign-in on Microsoft OAuth prompt.
+4. Verify user record is created in MongoDB.
+5. Verify Home Screen displays Microsoft user's Name and Email.
