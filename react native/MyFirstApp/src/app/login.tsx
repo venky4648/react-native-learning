@@ -205,7 +205,6 @@ export default function LoginScreen() {
                   style={{ color: theme.textSecondary }}
                   numberOfLines={1}
                   adjustsFontSizeToFit={true}
-                  minimumScaleFactor={0.7}
                 >
                   Don't have an account?{' '}
                   <ThemedText type="smallBold" style={{ color: '#007AFF' }}>
