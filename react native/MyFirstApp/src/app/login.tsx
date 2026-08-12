@@ -195,15 +195,22 @@ export default function LoginScreen() {
 
             {/* Footer / Switch to Signup */}
             <View style={styles.footer}>
-              <ThemedText type="small" style={{ color: theme.textSecondary }}>
-                Don't have an account?{' '}
-              </ThemedText>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => router.push('/signup')}
+                style={{ flexDirection: 'row', alignItems: 'center' }}
               >
-                <ThemedText type="smallBold" style={{ color: '#007AFF' }}>
-                  Sign Up
+                <ThemedText
+                  type="small"
+                  style={{ color: theme.textSecondary }}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit={true}
+                  minimumScaleFactor={0.7}
+                >
+                  Don't have an account?{' '}
+                  <ThemedText type="smallBold" style={{ color: '#007AFF' }}>
+                    Sign Up
+                  </ThemedText>
                 </ThemedText>
               </TouchableOpacity>
             </View>
