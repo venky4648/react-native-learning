@@ -51,6 +51,7 @@ export function ThemedInput({
         ]}
       >
         <TextInput
+          allowFontScaling={false}
           placeholderTextColor={theme.textSecondary}
           style={[
             styles.input,
