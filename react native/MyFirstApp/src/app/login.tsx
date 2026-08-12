@@ -58,7 +58,6 @@ export default function LoginScreen() {
     setErrors({});
     try {
       await login(email, password);
-      setLoading(false);
       router.replace('/');
     } catch (err: any) {
       setLoading(false);
@@ -75,7 +74,6 @@ export default function LoginScreen() {
     try {
       const msProfile = await signInWithMicrosoft();
       await loginWithMicrosoft(msProfile);
-      setMsLoading(false);
       router.replace('/');
     } catch (err: any) {
       setMsLoading(false);

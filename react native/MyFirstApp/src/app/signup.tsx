@@ -82,7 +82,6 @@ export default function SignupScreen() {
     setErrors({});
     try {
       await signup(name, email, password);
-      setLoading(false);
       router.replace('/');
     } catch (err: any) {
       setLoading(false);
@@ -99,7 +98,6 @@ export default function SignupScreen() {
     try {
       const msProfile = await signInWithMicrosoft();
       await loginWithMicrosoft(msProfile);
-      setMsLoading(false);
       router.replace('/');
     } catch (err: any) {
       setMsLoading(false);
