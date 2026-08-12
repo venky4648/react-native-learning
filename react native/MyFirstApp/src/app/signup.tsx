@@ -134,7 +134,7 @@ export default function SignupScreen() {
                 </ThemedText>
               </TouchableOpacity>
               <ThemedText type="subtitle" style={styles.title}>
-                Create Account ✨
+                Create Account
               </ThemedText>
               <ThemedText
                 type="small"

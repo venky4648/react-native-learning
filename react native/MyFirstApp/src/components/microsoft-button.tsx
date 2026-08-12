@@ -68,6 +68,7 @@ export function MicrosoftButton({
             style={styles.text}
             numberOfLines={1}
             adjustsFontSizeToFit={true}
+            minimumScaleFactor={0.7}
           >
             {title}
           </ThemedText>

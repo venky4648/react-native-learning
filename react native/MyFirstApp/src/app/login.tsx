@@ -110,7 +110,7 @@ export default function LoginScreen() {
                 </ThemedText>
               </TouchableOpacity>
               <ThemedText type="subtitle" style={styles.title}>
-                Welcome Back 👋
+                Welcome Back
               </ThemedText>
               <ThemedText
                 type="small"
@@ -157,7 +157,7 @@ export default function LoginScreen() {
               <TouchableOpacity
                 activeOpacity={0.7}
                 style={styles.forgotPassword}
-                onPress={() => {}}
+                onPress={() => { }}
               >
                 <ThemedText type="smallBold" style={{ color: '#007AFF' }}>
                   Forgot Password?
