@@ -58,7 +58,7 @@ export default function LoginScreen() {
     setErrors({});
     try {
       await login(email, password);
-      router.replace('/');
+      router.dismissAll();
     } catch (err: any) {
       setLoading(false);
       setErrors((prev) => ({
@@ -74,7 +74,7 @@ export default function LoginScreen() {
     try {
       const msProfile = await signInWithMicrosoft();
       await loginWithMicrosoft(msProfile);
-      router.replace('/');
+      router.dismissAll();
     } catch (err: any) {
       setMsLoading(false);
       setErrors((prev) => ({
