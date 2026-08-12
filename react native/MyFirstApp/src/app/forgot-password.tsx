@@ -51,10 +51,17 @@ export default function ForgotPasswordScreen() {
         body: JSON.stringify({ email }),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type');
+      let data;
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const errorText = await response.text();
+        throw new Error(`Server Error: ${response.status}. Make sure the backend is fully deployed.`);
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Email verification failed.');
+        throw new Error(data?.message || 'Email verification failed.');
       }
 
       setEmailVerified(true);
@@ -94,10 +101,16 @@ export default function ForgotPasswordScreen() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type');
+      let data;
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        throw new Error(`Server Error: ${response.status}. Failed to update password.`);
+      }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Password reset failed.');
+        throw new Error(data?.message || 'Password reset failed.');
       }
 
       Alert.alert('Success', 'Your password has been updated successfully.', [
