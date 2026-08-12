@@ -5,6 +5,8 @@ import { useColorScheme } from 'react-native';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AuthProvider } from '@/context/auth-context';
 
+import { useEffect } from 'react';
+import { useRouter, useSegments } from 'expo-router';
 import { useAuth } from '@/context/auth-context';
 
 SplashScreen.preventAutoHideAsync();
@@ -12,18 +14,25 @@ SplashScreen.preventAutoHideAsync();
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { user } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!segments) return;
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'signup';
+
+    if (user && inAuthGroup) {
+      router.replace('/');
+    }
+  }, [user, segments]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AnimatedSplashOverlay />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
-        {!user ? (
-          <>
-            <Stack.Screen name="login" />
-            <Stack.Screen name="signup" />
-          </>
-        ) : null}
+        <Stack.Screen name="login" />
+        <Stack.Screen name="signup" />
         <Stack.Screen name="explore" />
         <Stack.Screen name="+not-found" />
       </Stack>
